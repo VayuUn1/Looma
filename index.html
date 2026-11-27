@@ -21,10 +21,11 @@ button,input{outline:none;-webkit-tap-highlight-color:transparent;user-select:no
 .row{display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,.55);letter-spacing:.08em}
 input[type=range]{-webkit-appearance:none;width:100%;height:3px;background:rgba(255,255,255,.22);border-radius:9px;cursor:pointer}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#fff}
-.center{text-align:center;transform:translateY(-22vh);position:relative;z-index:2}
+.center{text-align:center;transform:translateY(-22vh);position:relative;z-index:2;pointer-events:none}
 h1{font-size:clamp(2.2rem,6vw,4.5rem);letter-spacing:.22em;padding-left:.22em}
 p{margin-top:.7rem;font-size:clamp(.85rem,1.5vw,1.05rem);font-weight:300;letter-spacing:.14em;padding-left:.14em;opacity:.85}
-#yt{position:fixed;bottom:0;right:0;width:200px;height:200px;opacity:.001;pointer-events:none;z-index:1}
+#ytWrap{position:fixed;bottom:14px;right:14px;width:160px;height:90px;border-radius:10px;overflow:hidden;opacity:.12;transition:opacity .3s;z-index:5}
+#ytWrap.active{opacity:0;pointer-events:none}
 </style>
 </head>
 <body>
@@ -36,11 +37,11 @@ p{margin-top:.7rem;font-size:clamp(.85rem,1.5vw,1.05rem);font-weight:300;letter-
   </div>
 </div>
 <div class="center"><h1>LOOMA</h1><p>By Vayu</p></div>
-<div id="yt"></div>
+<div id="ytWrap"><div id="yt"></div></div>
 <script>
 const VIDEO_ID = '4WNPgQ2PHbE';
 
-const btn=document.getElementById('btn'),seek=document.getElementById('seek'),vol=document.getElementById('vol'),tm=document.getElementById('tm');
+const btn=document.getElementById('btn'),seek=document.getElementById('seek'),vol=document.getElementById('vol'),tm=document.getElementById('tm'),wrap=document.getElementById('ytWrap');
 let ytPlayer,ready=0,playing=0,scrub=0,ctx;
 
 function clickSfx(up){
@@ -58,15 +59,15 @@ document.head.appendChild(tag);
 
 window.onYouTubeIframeAPIReady=()=>{
   ytPlayer=new YT.Player('yt',{
-    width:'200',height:'200',
+    width:'160',height:'90',
     videoId:VIDEO_ID,
-    playerVars:{autoplay:0,controls:0,playsinline:1,loop:1,playlist:VIDEO_ID},
+    playerVars:{autoplay:0,controls:1,playsinline:1,loop:1,playlist:VIDEO_ID},
     events:{
       onReady:e=>{ready=1;e.target.setVolume(+vol.value);seek.max=e.target.getDuration()||100},
       onStateChange:e=>{
         playing=(e.data===1);
         btn.classList.toggle('on',playing);
-        if(e.data===1)seek.max=ytPlayer.getDuration()||100;
+        if(playing){wrap.classList.add('active');seek.max=ytPlayer.getDuration()||100}
         if(e.data===0)ytPlayer.playVideo();
       },
       onError:e=>{tm.textContent='E'+e.data}
@@ -86,7 +87,7 @@ setInterval(()=>{
 btn.onclick=()=>{
   btn.classList.remove('bounce');void btn.offsetWidth;btn.classList.add('bounce');
   const next=!playing;clickSfx(next);
-  if(!ready)return;
+  if(!ready){tm.textContent='WAIT';return}
   if(next){ytPlayer.unMute();ytPlayer.setVolume(+vol.value);ytPlayer.playVideo()}
   else{ytPlayer.pauseVideo()}
 };
