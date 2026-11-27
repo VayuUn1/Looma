@@ -8,7 +8,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{height:100vh;background:#000;color:#fff;font-family:'Space Grotesk',sans-serif;display:grid;place-items:center;overflow:hidden;user-select:none}
-.menu{position:fixed;top:18px;left:18px;display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);border-radius:14px}
+.menu{position:fixed;top:18px;left:18px;z-index:10;display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);border-radius:14px}
 .btn{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.06);display:grid;place-items:center;cursor:pointer;transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
 .btn:active{transform:scale(.82)}
 .bounce{animation:b .34s cubic-bezier(.34,1.56,.64,1)}
@@ -16,79 +16,79 @@ body{height:100vh;background:#000;color:#fff;font-family:'Space Grotesk',sans-se
 .tri{width:0;height:0;margin-left:2px;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:10px solid #fff}
 .sq{display:none;gap:3px}.sq i{width:3.5px;height:11px;background:#fff;border-radius:1px}
 .on .tri{display:none}.on .sq{display:flex}
-.bars{display:flex;flex-direction:column;gap:6px;width:140px}
+.bars{display:flex;flex-direction:column;gap:6px;width:145px}
 .row{display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,.55);letter-spacing:.08em}
 input[type=range]{-webkit-appearance:none;width:100%;height:3px;background:rgba(255,255,255,.22);border-radius:9px;outline:none;cursor:pointer}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#fff}
 .center{text-align:center;transform:translateY(-22vh)}
 h1{font-size:clamp(2.2rem,6vw,4.5rem);letter-spacing:.22em;padding-left:.22em}
 p{margin-top:.7rem;font-size:clamp(.85rem,1.5vw,1.05rem);font-weight:300;letter-spacing:.14em;padding-left:.14em;opacity:.85}
+#yt{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none}
 </style>
 </head>
 <body>
 <div class="menu">
   <button id="btn" class="btn" aria-label="Play"><span class="tri"></span><span class="sq"><i></i><i></i></span></button>
   <div class="bars">
-    <div class="row"><span>SEEK</span><input id="seek" type="range" min="0" max="120" step=".1" value="0"><span id="tm">0:00</span></div>
-    <div class="row"><span>VOL</span><input id="vol" type="range" min="0" max="1" step=".01" value=".75"></div>
+    <div class="row"><span>SEEK</span><input id="seek" type="range" min="0" max="100" step="1" value="0"><span id="tm">0:00</span></div>
+    <div class="row"><span>VOL</span><input id="vol" type="range" min="0" max="100" step="1" value="80"></div>
   </div>
 </div>
 <div class="center"><h1>LOOMA</h1><p>By Vayu</p></div>
+<div id="yt"></div>
 <script>
-const btn=document.getElementById('btn'),seek=document.getElementById('seek'),vol=document.getElementById('vol'),tm=document.getElementById('tm');
-const chords=[[174.6,220,261.6,329.6],[164.8,196,246.9,293.7],[146.8,174.6,220,261.6],[130.8,164.8,196,246.9]];
-let ctx,gain,playing=0,t=0,last=null,bar=-1;
+const VIDEO_ID = '4WNPgQ2PHbE';
 
-function init(){
-  if(!ctx){
-    ctx=new(window.AudioContext||window.webkitAudioContext)();
-    gain=ctx.createGain();gain.gain.value=+vol.value;gain.connect(ctx.destination);
-    const buf=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),d=buf.getChannelData(0);
-    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*.003+(Math.random()>.9993?(Math.random()*2-1)*.07:0);
-    const src=ctx.createBufferSource(),f=ctx.createBiquadFilter();
-    src.buffer=buf;src.loop=1;f.type='bandpass';f.frequency.value=1800;
-    src.connect(f);f.connect(gain);src.start();
-  }
-  if(ctx.state==='suspended')ctx.resume();
-}
+const btn=document.getElementById('btn'),seek=document.getElementById('seek'),vol=document.getElementById('vol'),tm=document.getElementById('tm');
+let ytPlayer,ready=0,playing=0,scrub=0,ctx;
 
 function clickSfx(up){
-  init();const n=ctx.currentTime,o=ctx.createOscillator(),g=ctx.createGain();
+  if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();
+  if(ctx.state==='suspended')ctx.resume();
+  const n=ctx.currentTime,o=ctx.createOscillator(),g=ctx.createGain();
   o.type='triangle';o.frequency.setValueAtTime(up?520:360,n);o.frequency.exponentialRampToValueAtTime(up?170:110,n+.045);
   g.gain.setValueAtTime(.22,n);g.gain.exponentialRampToValueAtTime(.0001,n+.05);
-  o.connect(g);g.connect(gain);o.start(n);o.stop(n+.055);
+  o.connect(g);g.connect(ctx.destination);o.start(n);o.stop(n+.055);
 }
 
-function chord(idx){
-  if(!ctx||!playing)return;const n=ctx.currentTime;
-  chords[idx%4].forEach((hz,i)=>{
-    const o=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain();
-    o.type='triangle';o.frequency.setValueAtTime(hz,n);o.frequency.linearRampToValueAtTime(hz*.997,n+3.6);
-    f.type='lowpass';f.frequency.setValueAtTime(600,n);f.frequency.exponentialRampToValueAtTime(250,n+3.6);
-    g.gain.setValueAtTime(.0001,n+i*.03);g.gain.linearRampToValueAtTime(.08,n+.35+i*.03);g.gain.exponentialRampToValueAtTime(.0001,n+3.6);
-    o.connect(f);f.connect(g);g.connect(gain);o.start(n+i*.03);o.stop(n+3.7);
+const tag=document.createElement('script');
+tag.src='https://youtube.com';
+document.head.appendChild(tag);
+
+window.onYouTubeIframeAPIReady=()=>{
+  ytPlayer=new YT.Player('yt',{
+    videoId:VIDEO_ID,
+    playerVars:{autoplay:0,controls:0,loop:1,playlist:VIDEO_ID},
+    events:{
+      onReady:e=>{ready=1;e.target.setVolume(+vol.value);seek.max=e.target.getDuration()||100},
+      onStateChange:e=>{
+        playing=(e.data===1);
+        btn.classList.toggle('on',playing);
+        if(e.data===1)seek.max=ytPlayer.getDuration()||100;
+        if(e.data===0)ytPlayer.playVideo();
+      }
+    }
   });
-}
+};
 
 function fmt(s){const m=s/60|0,r=(s|0)%60;return m+':'+(r<10?'0':'')+r}
 
-function loop(ts){
-  if(!playing)return;
-  if(last)t+=(ts-last)/1000;last=ts;
-  if(t>=120){t=0;bar=-1}
-  const b=t/3.75|0;if(b!==bar){bar=b;chord(b)}
-  seek.value=t;tm.textContent=fmt(t);
-  requestAnimationFrame(loop);
-}
+setInterval(()=>{
+  if(ready&&playing&&!scrub){
+    const cur=ytPlayer.getCurrentTime()||0;
+    seek.value=cur;tm.textContent=fmt(cur);
+  }
+},400);
 
 btn.onclick=()=>{
   btn.classList.remove('bounce');void btn.offsetWidth;btn.classList.add('bounce');
-  playing=!playing;clickSfx(playing);btn.classList.toggle('on',playing);
-  if(playing){last=null;bar=-1;requestAnimationFrame(loop)}else if(ctx)ctx.suspend();
+  if(!ready)return;
+  const next=!playing;clickSfx(next);
+  next?ytPlayer.playVideo():ytPlayer.pauseVideo();
 };
-seek.oninput=()=>{t=+seek.value;tm.textContent=fmt(t)};
-seek.onchange=()=>{if(playing){init();bar=t/3.75|0;chord(bar)}};
-vol.oninput=()=>{if(gain)gain.gain.value=+vol.value};
+seek.oninput=()=>{scrub=1;tm.textContent=fmt(+seek.value)};
+seek.onchange=()=>{if(ready)ytPlayer.seekTo(+seek.value,true);scrub=0};
+vol.oninput=()=>{if(ready)ytPlayer.setVolume(+vol.value)};
 </script>
 </body>
 </html>
